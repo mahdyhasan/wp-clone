@@ -6,82 +6,43 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Seeding database...');
 
-  // Create default admin user
-  const adminEmail = 'admin@augmex.io';
-  const adminPassword = 'admin123';
-
-  // Check if admin user already exists
-  const existingAdmin = await prisma.user.findUnique({
-    where: { email: adminEmail },
+  // Create a test admin user
+  const hashedPassword = await bcrypt.hash('admin123', 10);
+  
+  const adminUser = await prisma.user.upsert({
+    where: { email: 'admin@example.com' },
+    update: {},
+    create: {
+      email: 'admin@example.com',
+      name: 'Admin User',
+      username: 'admin',
+      password: hashedPassword,
+      role: 'SUPER_ADMIN',
+      isActive: true,
+    },
   });
 
-  if (!existingAdmin) {
-    const hashedPassword = await bcrypt.hash(adminPassword, 12);
-    
-    await prisma.user.create({
-      data: {
-        email: adminEmail,
-        name: 'Admin User',
-        password: hashedPassword,
-        role: 'ADMIN',
-        username: 'admin',
-      },
-    });
+  console.log('Created admin user:', adminUser.email);
 
-    console.log('Admin user created successfully');
-    console.log(`Email: ${adminEmail}`);
-    console.log(`Password: ${adminPassword}`);
-  } else {
-    console.log('Admin user already exists');
-  }
+  // Create a test editor user
+  const editorPassword = await bcrypt.hash('editor123', 10);
+  
+  const editorUser = await prisma.user.upsert({
+    where: { email: 'editor@example.com' },
+    update: {},
+    create: {
+      email: 'editor@example.com',
+      name: 'Editor User',
+      username: 'editor',
+      password: editorPassword,
+      role: 'EDITOR',
+      isActive: true,
+    },
+  });
 
-  // Create some default categories
-  const categories = [
-    { name: 'Uncategorized', slug: 'uncategorized', description: 'Default category' },
-    { name: 'Technology', slug: 'technology', description: 'Tech-related posts' },
-    { name: 'Business', slug: 'business', description: 'Business and finance' },
-    { name: 'Lifestyle', slug: 'lifestyle', description: 'Lifestyle and personal' },
-  ];
+  console.log('Created editor user:', editorUser.email);
 
-  for (const category of categories) {
-    const existingCategory = await prisma.category.findUnique({
-      where: { slug: category.slug },
-    });
-
-    if (!existingCategory) {
-      await prisma.category.create({
-        data: category,
-      });
-      console.log(`Category '${category.name}' created`);
-    } else {
-      console.log(`Category '${category.name}' already exists`);
-    }
-  }
-
-  // Create some default tags
-  const tags = [
-    { name: 'General', slug: 'general' },
-    { name: 'News', slug: 'news' },
-    { name: 'Tutorial', slug: 'tutorial' },
-    { name: 'Review', slug: 'review' },
-  ];
-
-  for (const tag of tags) {
-    const existingTag = await prisma.tag.findUnique({
-      where: { slug: tag.slug },
-    });
-
-    if (!existingTag) {
-      await prisma.tag.create({
-        data: tag,
-      });
-      console.log(`Tag '${tag.name}' created`);
-    } else {
-      console.log(`Tag '${tag.name}' already exists`);
-    }
-  }
-
-  console.log('Database seeding completed');
+  console.log('Database seeded successfully!');
 }
 
 main()

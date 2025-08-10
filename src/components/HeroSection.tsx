@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ChevronRight, Users, Code, Headphones, MessageSquare, Brain, Target } from 'lucide-react';
+import { ChevronRight, Users, Code, Headphones, MessageSquare, Brain, Target, Download } from 'lucide-react';
 
 const HeroSection = () => {
   const [selectedTalent, setSelectedTalent] = useState('');
@@ -86,6 +86,12 @@ const HeroSection = () => {
                 <Button variant="outline" size="lg" asChild>
                   <Link href="/services">
                     View All Services
+                  </Link>
+                </Button>
+                <Button size="lg" variant="secondary" className="group" asChild>
+                  <Link href="/download">
+                    <Download className="mr-2 h-4 w-4" />
+                    Download Admin Dashboard
                   </Link>
                 </Button>
               </div>

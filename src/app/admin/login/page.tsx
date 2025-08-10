@@ -34,13 +34,19 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (response.ok) {
-        // The token is automatically set in HTTP-only cookie by the server
-        // Use window.location for a more reliable redirect
-        window.location.href = '/admin';
+        console.log('Login successful, redirecting...');
+        // Wait a moment for the cookie to be set
+        setTimeout(() => {
+          console.log('Redirecting to /admin...');
+          // Use window.location for a full page reload
+          window.location.href = '/admin';
+        }, 100);
       } else {
+        console.log('Login failed:', data.error);
         setError(data.error || 'Login failed');
       }
     } catch (error) {
+      console.error('Login error:', error);
       setError('An error occurred. Please try again.');
     } finally {
       setIsLoading(false);
@@ -55,6 +61,9 @@ export default function LoginPage() {
           <CardDescription className="text-center">
             Enter your credentials to access the admin dashboard
           </CardDescription>
+          <div className="text-xs text-gray-500 text-center mt-2">
+            Demo credentials: admin@example.com / admin123
+          </div>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">

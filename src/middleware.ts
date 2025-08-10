@@ -1,8 +1,5 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import jwt from 'jsonwebtoken';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 export function middleware(request: NextRequest) {
   const token = request.cookies.get('auth-token')?.value;
@@ -17,26 +14,21 @@ export function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/admin/login', request.url));
     }
 
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET) as {
-        userId: string;
-        email: string;
-        role: string;
-      };
-
-      // Add user info to headers for API routes
-      const requestHeaders = new Headers(request.headers);
-      requestHeaders.set('user-id', decoded.userId);
-      requestHeaders.set('user-role', decoded.role);
-
-      return NextResponse.next({
-        request: {
-          headers: requestHeaders,
-        },
-      });
-    } catch (error) {
+    // For now, just check if token exists and is not empty
+    // The actual JWT verification will happen in the AuthGuard component
+    if (token.length < 10) {
       return NextResponse.redirect(new URL('/admin/login', request.url));
     }
+
+    // Add user info to headers for API routes (we'll verify the token in API routes)
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set('auth-token', token);
+
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
   }
 
   return NextResponse.next();

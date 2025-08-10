@@ -48,7 +48,7 @@ export function UserEditor({ user, onSave, onCancel }: UserEditorProps) {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validate passwords for new users
@@ -57,12 +57,40 @@ export function UserEditor({ user, onSave, onCancel }: UserEditorProps) {
       return;
     }
 
-    const userData = {
-      ...formData,
-      ...(password && { password }) // Only include password if it's provided
-    };
+    try {
+      const userData = {
+        email: formData.email,
+        username: formData.email.split('@')[0], // Generate username from email
+        name: formData.name,
+        role: formData.role,
+        bio: formData.bio,
+        isActive: formData.isActive,
+        ...(password && { password }) // Only include password if it's provided
+      };
 
-    onSave(userData);
+      const url = user ? `/api/users/${user.id}` : '/api/users';
+      const method = user ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData),
+      });
+
+      if (response.ok) {
+        const savedUser = await response.json();
+        onSave(savedUser);
+      } else {
+        const error = await response.json();
+        console.error('Error saving user:', error);
+        alert('Failed to save user: ' + (error.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error saving user:', error);
+      alert('Failed to save user. Please try again.');
+    }
   };
 
   const getRoleBadgeColor = (role: string) => {

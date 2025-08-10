@@ -38,7 +38,7 @@ const navigation = [
   { name: 'Pages', href: '/admin/pages', icon: File },
   { name: 'Media', href: '/admin/media', icon: Image },
   { name: 'Categories', href: '/admin/categories', icon: FolderOpen },
-  { name: 'Tags', href: '/admin/categories', icon: Tag },
+  { name: 'Tags', href: '/admin/tags', icon: Tag },
   { name: 'Comments', href: '/admin/comments', icon: MessageSquare },
   { name: 'Users', href: '/admin/users', icon: Users },
   { name: 'Settings', href: '/admin/settings', icon: Settings },

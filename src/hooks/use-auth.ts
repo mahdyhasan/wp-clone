@@ -41,7 +41,8 @@ export function useAuth() {
       await fetch('/api/auth/logout', { method: 'POST' });
       setUser(null);
       localStorage.removeItem('auth-token'); // Clear any localStorage token
-      router.push('/admin/login');
+      // Use window.location.replace to avoid router state issues
+      window.location.replace('/admin/login');
     } catch (error) {
       console.error('Logout error:', error);
     }

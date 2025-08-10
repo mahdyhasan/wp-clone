@@ -9,9 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { RichTextEditor } from './RichTextEditor';
-import { TemplateSelector } from './TemplateSelector';
-import { MediaSelector } from './MediaSelector';
+import dynamic from 'next/dynamic';
 import { pageTemplates, PageTemplate } from '@/lib/templates';
 import { 
   Save, 
@@ -33,6 +31,20 @@ import {
   Users,
   Globe
 } from 'lucide-react';
+
+// Dynamically import components that cause hydration issues
+const RichTextEditor = dynamic(() => import('./RichTextEditor').then(mod => mod.RichTextEditor), {
+  ssr: false,
+  loading: () => <div className="border rounded-lg p-4 min-h-[200px] bg-gray-50">Loading editor...</div>
+});
+
+const TemplateSelector = dynamic(() => import('./TemplateSelector').then(mod => mod.TemplateSelector), {
+  ssr: false
+});
+
+const MediaSelector = dynamic(() => import('./MediaSelector').then(mod => mod.MediaSelector), {
+  ssr: false
+});
 
 interface PostEditorProps {
   post?: any;

@@ -5,11 +5,13 @@ import HowItWorksSection from '@/components/HowItWorksSection';
 import ValueCalculator from '@/components/ValueCalculator';
 import LiveStatsSection from '@/components/LiveStatsSection';
 import TalentCategoriesSection from '@/components/TalentCategoriesSection';
+import DownloadSection from '@/components/DownloadSection';
 
 export default function Home() {
   return (
     <div className="min-h-screen">
       <HeroSection />
+      <DownloadSection />
       <ProblemSection />
       <StrengthsSection />
       <HowItWorksSection />

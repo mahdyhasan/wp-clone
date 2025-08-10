@@ -12,6 +12,7 @@ import Placeholder from '@tiptap/extension-placeholder';
 import Color from '@tiptap/extension-color';
 import TextStyle from '@tiptap/extension-text-style';
 import Underline from '@tiptap/extension-underline';
+import TextAlign from '@tiptap/extension-text-align';
 import { 
   Bold, 
   Italic, 
@@ -54,14 +55,16 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start writing
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        heading: {
+          levels: [1, 2, 3],
+        },
+      }),
       Link.configure({
         openOnClick: false,
       }),
       Image,
-      Table.configure({
-        resizable: true,
-      }),
+      Table,
       TableRow,
       TableHeader,
       TableCell,
@@ -71,10 +74,18 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start writing
       Color,
       TextStyle,
       Underline,
+      TextAlign.configure({
+        types: ['heading', 'paragraph'],
+      }),
     ],
     content,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
+    },
+    editorProps: {
+      attributes: {
+        class: 'prose prose-sm max-w-none focus:outline-none',
+      },
     },
   });
 
@@ -304,7 +315,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start writing
       <MenuBar />
       <EditorContent
         editor={editor}
-        className="prose prose-sm max-w-none p-4 min-h-[200px] focus:outline-none"
+        className="p-4 min-h-[200px]"
       />
     </div>
   );

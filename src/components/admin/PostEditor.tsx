@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,9 +8,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { RichTextEditor } from './RichTextEditor';
-import { TemplateSelector } from './TemplateSelector';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import dynamic from 'next/dynamic';
 import { pageTemplates, PageTemplate } from '@/lib/templates';
+import { generateSlug, isValidSlug } from '@/lib/slug';
 import { 
   Save, 
   Eye, 
@@ -20,8 +21,21 @@ import {
   Calendar,
   Plus,
   X,
-  File
+  File,
+  Link,
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react';
+
+// Dynamically import components that cause hydration issues
+const RichTextEditor = dynamic(() => import('./RichTextEditor').then(mod => mod.RichTextEditor), {
+  ssr: false,
+  loading: () => <div className="border rounded-lg p-4 min-h-[200px] bg-gray-50">Loading editor...</div>
+});
+
+const TemplateSelector = dynamic(() => import('./TemplateSelector').then(mod => mod.TemplateSelector), {
+  ssr: false
+});
 
 interface PostEditorProps {
   post?: any;
@@ -43,6 +57,11 @@ const PostEditor: React.FC<PostEditorProps> = ({ post, onSave, onCancel }) => {
 
   const [tags, setTags] = useState<string[]>(post?.tags?.map((tag: any) => tag.name) || []);
   const [newTag, setNewTag] = useState('');
+  const [slugValidation, setSlugValidation] = useState<{
+    isValid: boolean;
+    message: string;
+    isChecking: boolean;
+  }>({ isValid: true, message: '', isChecking: false });
 
   const categories = [
     { id: '1', name: 'Company News' },
@@ -51,6 +70,68 @@ const PostEditor: React.FC<PostEditorProps> = ({ post, onSave, onCancel }) => {
     { id: '4', name: 'Business' },
     { id: '5', name: 'Case Studies' }
   ];
+
+  // Auto-generate slug from title
+  useEffect(() => {
+    if (formData.title && !post?.slug) {
+      const generatedSlug = generateSlug(formData.title);
+      setFormData(prev => ({ ...prev, slug: generatedSlug }));
+    }
+  }, [formData.title, post?.slug]);
+
+  // Validate slug when it changes
+  useEffect(() => {
+    const validateSlug = async () => {
+      if (!formData.slug) {
+        setSlugValidation({ isValid: true, message: '', isChecking: false });
+        return;
+      }
+
+      setSlugValidation(prev => ({ ...prev, isChecking: true }));
+
+      // Basic format validation
+      if (!isValidSlug(formData.slug)) {
+        setSlugValidation({
+          isValid: false,
+          message: 'Slug contains invalid characters',
+          isChecking: false
+        });
+        return;
+      }
+
+      // Check uniqueness (simulated - in real app, you'd call API)
+      try {
+        const response = await fetch('/api/slugs/check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: formData.slug,
+            type: 'post',
+            currentId: post?.id
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setSlugValidation({
+            isValid: data.isUnique,
+            message: data.isUnique ? 'Slug is available' : 'Slug is already in use',
+            isChecking: false
+          });
+        }
+      } catch (error) {
+        // If API fails, just do basic validation
+        setSlugValidation({
+          isValid: true,
+          message: 'Slug format is valid',
+          isChecking: false
+        });
+      }
+    };
+
+    const timeoutId = setTimeout(validateSlug, 500);
+    return () => clearTimeout(timeoutId);
+  }, [formData.slug, post?.id]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -100,12 +181,43 @@ const PostEditor: React.FC<PostEditorProps> = ({ post, onSave, onCancel }) => {
     }
   };
 
-  const handleSave = () => {
-    const postData = {
-      ...formData,
-      tags: tags.map(tag => ({ name: tag, slug: generateSlug(tag) }))
-    };
-    onSave(postData);
+  const handleSave = async () => {
+    try {
+      const postData = {
+        title: formData.title,
+        slug: formData.slug,
+        content: formData.content,
+        excerpt: formData.excerpt,
+        status: formData.status,
+        type: formData.type,
+        categoryId: formData.categoryId || null,
+        publishedAt: formData.publishedAt || null,
+        tags: tags.map(tag => ({ name: tag, slug: generateSlug(tag) }))
+      };
+
+      const url = post ? `/api/posts/${post.id}` : '/api/posts';
+      const method = post ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+      });
+
+      if (response.ok) {
+        const savedPost = await response.json();
+        onSave(savedPost);
+      } else {
+        const error = await response.json();
+        console.error('Error saving post:', error);
+        alert('Failed to save post: ' + (error.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error saving post:', error);
+      alert('Failed to save post. Please try again.');
+    }
   };
 
   return (
@@ -144,13 +256,43 @@ const PostEditor: React.FC<PostEditorProps> = ({ post, onSave, onCancel }) => {
 
             <div>
               <Label htmlFor="slug">Slug</Label>
-              <Input
-                id="slug"
-                value={formData.slug}
-                onChange={(e) => handleInputChange('slug', e.target.value)}
-                placeholder="post-slug"
-                className="mt-1"
-              />
+              <div className="relative mt-1">
+                <Input
+                  id="slug"
+                  value={formData.slug}
+                  onChange={(e) => handleInputChange('slug', e.target.value)}
+                  placeholder="post-slug"
+                  className={`pr-10 ${
+                    slugValidation.isChecking ? 'border-yellow-400' :
+                    !slugValidation.isValid ? 'border-red-500' :
+                    formData.slug ? 'border-green-500' : ''
+                  }`}
+                />
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  {slugValidation.isChecking ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
+                  ) : formData.slug ? (
+                    slugValidation.isValid ? (
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4 text-red-500" />
+                    )
+                  ) : null}
+                </div>
+              </div>
+              {slugValidation.message && (
+                <p className={`text-xs mt-1 ${
+                  slugValidation.isValid ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {slugValidation.message}
+                </p>
+              )}
+              {formData.slug && (
+                <div className="flex items-center mt-2 text-xs text-gray-500">
+                  <Link className="h-3 w-3 mr-1" />
+                  <span>Preview: /{formData.slug}/</span>
+                </div>
+              )}
             </div>
 
             <div>
