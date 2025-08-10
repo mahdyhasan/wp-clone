@@ -1,0 +1,278 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User Authentication and Roles
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  username      String?   @unique
+  name          String?
+  password      String
+  role          UserRole  @default(CONTRIBUTOR)
+  avatar        String?
+  bio           String?
+  isActive      Boolean   @default(true)
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  posts         Post[]
+  pages         Page[]
+  media         Media[]
+  comments      Comment[]
+  seoMetadata   SEOMetadata[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  EDITOR
+  CONTRIBUTOR
+}
+
+// Content Types
+model Post {
+  id            String      @id @default(cuid())
+  title         String
+  slug          String      @unique
+  content       String?
+  excerpt       String?
+  featuredImage String?
+  status        PostStatus  @default(DRAFT)
+  type          PostType    @default(POST)
+  format        PostFormat  @default(STANDARD)
+  publishedAt   DateTime?
+  authorId      String
+  categoryId    String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // Relations
+  author        User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  category      Category?   @relation(fields: [categoryId], references: [id])
+  tags          PostTag[]
+  comments      Comment[]
+  seoMetadata   SEOMetadata?
+
+  @@map("posts")
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+  TRASH
+}
+
+enum PostFormat {
+  STANDARD
+  GALLERY
+  VIDEO
+  AUDIO
+  QUOTE
+  LINK
+  STATUS
+  CHAT
+}
+
+enum PostType {
+  POST
+  PAGE
+  SUCCESS_STORY
+  SERVICE
+  BLOG
+  PORTFOLIO
+}
+
+model Page {
+  id            String      @id @default(cuid())
+  title         String
+  slug          String      @unique
+  content       String?
+  excerpt       String?
+  featuredImage String?
+  status        PostStatus  @default(DRAFT)
+  template      String?     @default("default")
+  parentId      String?
+  order         Int         @default(0)
+  authorId      String
+  publishedAt   DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // Relations
+  author        User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent        Page?       @relation("PageHierarchy", fields: [parentId], references: [id])
+  children      Page[]      @relation("PageHierarchy")
+  seoMetadata   SEOMetadata?
+
+  @@map("pages")
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  color       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  posts       Post[]
+
+  @@map("categories")
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  color     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  posts     PostTag[]
+
+  @@map("tags")
+}
+
+model PostTag {
+  postId String
+  tagId  String
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+  @@map("post_tags")
+}
+
+// Media Management
+model Media {
+  id            String      @id @default(cuid())
+  filename      String
+  originalName  String
+  filePath      String
+  fileSize      Int
+  mimeType      String
+  altText       String?
+  title         String?
+  caption       String?
+  description   String?
+  type          MediaType   @default(IMAGE)
+  status        MediaStatus @default(ACTIVE)
+  uploadedBy    String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // Relations
+  uploader      User        @relation(fields: [uploadedBy], references: [id])
+
+  @@map("media")
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  DOCUMENT
+  AUDIO
+  OTHER
+}
+
+enum MediaStatus {
+  ACTIVE
+  TRASH
+}
+
+// Comments
+model Comment {
+  id        String        @id @default(cuid())
+  content   String
+  authorId  String
+  postId    String?
+  status    CommentStatus @default(PENDING)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  // Relations
+  author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  post      Post?         @relation(fields: [postId], references: [id])
+
+  @@map("comments")
+}
+
+enum CommentStatus {
+  PENDING
+  APPROVED
+  SPAM
+  TRASH
+}
+
+// SEO Metadata
+model SEOMetadata {
+  id              String   @id @default(cuid())
+  title           String?
+  description     String?
+  keywords        String?
+  canonicalUrl    String?
+  ogTitle         String?
+  ogDescription   String?
+  ogImage         String?
+  twitterCard     String?
+  twitterTitle    String?
+  twitterImage    String?
+  noIndex         Boolean  @default(false)
+  noFollow        Boolean  @default(false)
+  userId          String?  @unique
+  postId          String?  @unique
+  pageId          String?  @unique
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  user            User?    @relation(fields: [userId], references: [id])
+  post            Post?    @relation(fields: [postId], references: [id])
+  page            Page?    @relation(fields: [pageId], references: [id])
+
+  @@map("seo_metadata")
+}
+
+// Site Settings
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  type      SettingType @default(STRING)
+  group     String   @default("general")
+  label     String?
+  description String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+enum SettingType {
+  STRING
+  NUMBER
+  BOOLEAN
+  JSON
+  TEXT
+}
